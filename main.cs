@@ -4,22 +4,67 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 
 namespace TAMUVPNApplication {
     static class Constants {
         public const int MAX_ATTEMPTS = 5;
-        public const string RASPHONE = @"C:\Windows\System32\rasphone.exe";
-        public const string TAMU_VPN = @".\Resources\TAMU_VPN.pbk";
+        public const string RASDIAL = "rasdial.exe";
         public const string VPN_NAME = "TAMU VPN";
         public const string LOG_DIR = @".\Logs\";
     }
 
     class TAMUVPN {
-        static void ConnectVPN() {
+        static string GetPassword() {
+            string password = "";
+            System.ConsoleKeyInfo info = Console.ReadKey(true);
+            while (info.Key != ConsoleKey.Enter) {
+                if (info.Key != ConsoleKey.Backspace) {
+                    password += info.KeyChar;
+                }
+                else {
+                    if (!string.IsNullOrEmpty(password)) {
+                        password = password.Substring(0, password.Length - 1);
+                    }
+                }
+                info = Console.ReadKey(true);
+            }
+            return password;
+        }
+
+        static void CreateVPN() {
+            try {
+                PowerShell ps = PowerShell.Create();
+                    ps.AddCommand("Add-VpnConnection");
+                    ps.AddParameter("Name", Constants.VPN_NAME);
+                    ps.AddParameter("ServerAddress", "connect.tamu.edu");
+                    ps.AddParameter("TunnelType", "L2tp");
+                    ps.AddParameter("L2tpPsk", "tamuvpn");
+                    ps.AddParameter("EncryptionLevel", "Maximum");
+                    ps.AddParameter("Force");
+                    ps.Invoke();
+            }
+            catch {}
+        }
+
+        static void DeleteVPN() {
+            try {
+                PowerShell ps = PowerShell.Create();
+                    ps.AddCommand("Remove-VpnConnection");
+                    ps.AddParameter("Name", Constants.VPN_NAME);
+                    ps.AddParameter("Force");
+                    ps.Invoke();
+            }
+            catch {}
+        }
+
+        static void ConnectVPN(string username, string password) {
             var process = new Process {
                 StartInfo = new ProcessStartInfo {
-                    FileName = Constants.RASPHONE, 
-                    Arguments = "-f " + Constants.TAMU_VPN + " -d \"" + Constants.VPN_NAME + "\""
+                    FileName = Constants.RASDIAL,
+                    Arguments = "\"" + Constants.VPN_NAME + "\" " + username + " " + password,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 }
             };
             process.Start();
@@ -29,8 +74,9 @@ namespace TAMUVPNApplication {
         static void TerminateVPN() {
             var process = new Process {
                 StartInfo = new ProcessStartInfo {
-                    FileName = Constants.RASPHONE, 
-                    Arguments = "-h \"" + Constants.VPN_NAME + "\""
+                    FileName = Constants.RASDIAL, 
+                    Arguments = "\"" + Constants.VPN_NAME + "\" /d",
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 }
             };
             process.Start();
@@ -62,27 +108,25 @@ namespace TAMUVPNApplication {
         }
 
         static void Main(string[] args) {
-            if (!File.Exists(Constants.RASPHONE)) {
-                Console.WriteLine("Program incorrectly configured. Missing " + Constants.RASPHONE);
-                Console.ReadKey();
-                return;
-            }
-            if (!File.Exists(Constants.TAMU_VPN)) {
-                Console.WriteLine("Program incorrectly configured. Missing " + Constants.TAMU_VPN);
-                Console.ReadKey();
-                return;
-            }
+            CreateVPN();
 
             string logName = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + "_log.txt";
             EnsureDirectoryExists(Constants.LOG_DIR);
             StreamWriter log = new StreamWriter(Constants.LOG_DIR + logName);
 
-            Console.WriteLine("Please enter your NetID credentials on the next window. Check phone for DUO push after entering credentials.");
+            Console.WriteLine("Please enter your NetID credentials");
+            string username = null;
+            string password = null;
+            Console.Write("Username: ");
+            username = Console.ReadLine();
+            Console.Write("Passowrd: ");
+            password = GetPassword();
+
             string ip = null;
             int count = Constants.MAX_ATTEMPTS;
             log.WriteLine("Attempting to connect to TAMU VPN...");
             while(ip == null && count > 0) {
-                ConnectVPN();
+                ConnectVPN(username, password);
                 ip = GetIPAddress();
                 count--;
             }
@@ -108,6 +152,7 @@ namespace TAMUVPNApplication {
             }
             TerminateVPN();
             log.WriteLine("Successfully disconnected at " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            DeleteVPN();
             log.Close();
         }
     }
