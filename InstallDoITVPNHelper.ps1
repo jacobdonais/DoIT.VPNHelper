@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]Param (
+[CmdletBinding()]Param (
 
 )
 
@@ -73,5 +73,15 @@ try {
 }
 catch {
     Write-Warning "Failed to compile the program"
+    break
+}
+
+Write-Verbose "Removing resource files"
+try {
+    Remove-Item -Path "$($ResourceLocation)$($ModuleName)-master" -Recurse -Force -Confirm:$false
+    Write-Verbose ".Successfully removed resource files"
+}
+catch {
+    Write-Warning "Failed to remove resource files"
     break
 }
