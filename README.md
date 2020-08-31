@@ -3,6 +3,9 @@ The DoIT.VPNHelper is designed to connect the user to the TAMU VPN for troublesh
 
 ## Compilation
 **Please make sure `C:\Windows\Microsoft.NET\Framework64\<version>` is added to system path for csc.**
+### Compilation with PS Script file
+Please download the file `InstallDoITVPNHelper.ps1` and run it with PowerShell.
+
 ### Compilation with makefile
 Use the makefile to install and package
 ```
