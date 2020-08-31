@@ -9,7 +9,7 @@ run:
 	./VPNConnect.exe
 
 package:
-	zip VPNConnect.zip VPNConnect.exe Resources/*
+	zip VPNConnect.zip VPNConnect.exe
 
 all:
 	csc /reference:Resources/system.management.automation.dll /win32icon:Resources/TAMU.ico -out:VPNConnect.exe main.cs -nologo
