@@ -35,6 +35,7 @@ namespace TAMUVPNApplication {
                           DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") +
                           ": Section start");
             status = 0;
+            log.AutoFlush = true;
         }
 
         /* Finalizer for log. Will close the log file. */
